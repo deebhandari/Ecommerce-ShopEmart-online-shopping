@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - ShopVerse</title>
+    <title>Login - ShopEMart</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -197,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="login-container">
             <div class="card">
                 <div class="card-header">
-                    <h2><i class="fas fa-store"></i> ShopVerse</h2>
+                    <h2><i class="fas fa-store"></i> ShopEMart</h2>
                     <p>Login to your account</p>
                 </div>
                 <div class="card-body p-4">

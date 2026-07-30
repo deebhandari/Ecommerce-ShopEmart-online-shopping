@@ -27,6 +27,15 @@ if ($order_id > 0) {
     $stmt->execute([$order_id]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // Calculate totals
+    $subtotal = 0;
+    foreach ($items as $item) {
+        $subtotal += $item['price'] * $item['quantity'];
+    }
+    $vat = $subtotal * 0.13; // 13% VAT
+    $delivery_charge = 150; // Fixed delivery charge
+    $total = $subtotal + $vat + $delivery_charge;
+    
     if ($order):
 ?>
 <!DOCTYPE html>
@@ -122,7 +131,14 @@ if ($order_id > 0) {
             font-size: 11px;
             color: #999;
         }
+        @media print {
+            .no-print { display: none; }
+            .order-details-card { background: #667eea !important; -webkit-print-color-adjust: exact; }
+            .badge-status { -webkit-print-color-adjust: exact; }
+        }
     </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Header Card -->
@@ -252,30 +268,38 @@ if ($order_id > 0) {
                             </div>
                         </td>
                         <td><?php echo $item['quantity']; ?></td>
-                        <td>$<?php echo number_format($item['price'], 2); ?></td>
-                        <td><strong>$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></strong></td>
+                        <td>RS <?php echo number_format($item['price'], 2); ?></td>
+                        <td><strong>RS <?php echo number_format($item['price'] * $item['quantity'], 2); ?></strong></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr class="table-active">
-                        <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                        <td>$<?php echo number_format($order['total_amount'], 2); ?></td>
+                        <td colspan="3" class="text-end">
+                            <strong>Product Subtotal:</strong>
+                        </td>
+                        <td>RS <?php echo number_format($subtotal, 2); ?></td>
                     </tr>
                     <tr class="table-active">
-                        <td colspan="3" class="text-end"><strong>Shipping:</strong></td>
-                        <td><span class="text-success">FREE</span></td>
+                        <td colspan="3" class="text-end">
+                            <strong>VAT (13%):</strong>
+                        </td>
+                        <td>RS <?php echo number_format($vat, 2); ?></td>
                     </tr>
-                    <?php if($order['payment_method'] != 'cod'): ?>
                     <tr class="table-active">
-                        <td colspan="3" class="text-end"><strong>Tax (13% VAT):</strong></td>
-                        <td>$<?php echo number_format($order['total_amount'] * 0.13, 2); ?></td>
+                        <td colspan="3" class="text-end">
+                            <strong>Delivery Charge:</strong>
+                        </td>
+                        <td>RS <?php echo number_format($delivery_charge, 2); ?></td>
                     </tr>
-                    <?php endif; ?>
                     <tr class="table-primary">
-                        <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
+                        <td colspan="3" class="text-end">
+                            <strong>Total Amount:</strong>
+                        </td>
                         <td>
-                            <strong class="total-amount">$<?php echo number_format($order['total_amount'], 2); ?></strong>
+                            <strong class="total-amount">
+                                RS <?php echo number_format($total, 2); ?>
+                            </strong>
                         </td>
                     </tr>
                 </tfoot>
@@ -322,7 +346,7 @@ if ($order_id > 0) {
     </div>
     
     <!-- Action Buttons -->
-    <div class="mt-3 text-end">
+    <div class="mt-3 text-end no-print">
         <button onclick="window.print()" class="btn btn-outline-secondary btn-sm me-2">
             <i class="fas fa-print"></i> Print Invoice
         </button>

@@ -1,37 +1,45 @@
 <?php
-// eSewa Configuration for ShopVerse
-class EsewaConfig {
-    // Set to false for live production
-    public static $TEST_MODE = true;
-    
-    // Test Credentials (Sandbox)
-    public static $TEST_MERCHANT_CODE = "EPAYTEST";
-    public static $TEST_SECRET_KEY = "8gBm/:&EnhH.1,q";
-    
-    // Test URLs
-    public static $TEST_PAYMENT_URL = "https://uat.esewa.com.np/epay/main";
-    public static $TEST_VERIFICATION_URL = "https://uat.esewa.com.np/epay/transrec";
-    
-    // Live Credentials (Replace after merchant approval)
-    public static $LIVE_MERCHANT_CODE = "YOUR_LIVE_CODE";
-    public static $LIVE_SECRET_KEY = "YOUR_LIVE_SECRET";
-    public static $LIVE_PAYMENT_URL = "https://esewa.com.np/epay/main";
-    public static $LIVE_VERIFICATION_URL = "https://esewa.com.np/epay/transrec";
-    
-    public static function getMerchantCode() {
-        return self::$TEST_MODE ? self::$TEST_MERCHANT_CODE : self::$LIVE_MERCHANT_CODE;
+
+class EsewaConfig
+{
+    private static $test_mode = true;
+
+    private static $merchant_code = "EPAYTEST";
+    private static $secret_key = "8gBm/:&EnhH.1/q";
+
+    private static $test_payment_url =
+        "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+
+    private static $live_payment_url =
+        "https://epay.esewa.com.np/api/epay/main/v2/form";
+
+    public static function getMerchantCode()
+    {
+        return self::$merchant_code;
     }
-    
-    public static function getPaymentUrl() {
-        return self::$TEST_MODE ? self::$TEST_PAYMENT_URL : self::$LIVE_PAYMENT_URL;
+
+    public static function getSecretKey()
+    {
+        return self::$secret_key;
     }
-    
-    public static function getVerificationUrl() {
-        return self::$TEST_MODE ? self::$TEST_VERIFICATION_URL : self::$LIVE_VERIFICATION_URL;
+
+    public static function getPaymentUrl()
+    {
+        return self::$test_mode
+            ? self::$test_payment_url
+            : self::$live_payment_url;
     }
-    
-    public static function isTestMode() {
-        return self::$TEST_MODE;
+
+    public static function generateSignature($data)
+    {
+        return base64_encode(
+            hash_hmac(
+                'sha256',
+                $data,
+                self::$secret_key,
+                true
+            )
+        );
     }
 }
 ?>

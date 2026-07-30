@@ -48,6 +48,44 @@ if (isset($_POST['fix_stock'])) {
     exit();
 }
 
+// Handle remove from cart
+if (isset($_GET['remove']) && isset($_GET['cart_id'])) {
+    $cart_id = intval($_GET['cart_id']);
+    $stmt = $db->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->execute([$cart_id, $user_id]);
+    $_SESSION['cart_success'] = "Item removed from cart successfully!";
+    header("Location: cart.php");
+    exit();
+}
+
+// Handle update cart (via POST)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_cart'])) {
+    $has_error = false;
+    foreach ($_POST['quantity'] as $cart_id => $quantity) {
+        $quantity = intval($quantity);
+        if ($quantity < 1) $quantity = 1;
+        
+        // Get max stock for this cart item
+        $stmt = $db->prepare("SELECT p.stock FROM cart c JOIN products p ON c.product_id = p.id WHERE c.id = ? AND c.user_id = ?");
+        $stmt->execute([$cart_id, $user_id]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($product && $quantity <= $product['stock']) {
+            $stmt = $db->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$quantity, $cart_id, $user_id]);
+        } else {
+            $has_error = true;
+            $_SESSION['cart_error'] = "Quantity exceeds available stock for one or more items.";
+        }
+    }
+    
+    if (!$has_error) {
+        $_SESSION['cart_success'] = "Cart updated successfully!";
+    }
+    header("Location: cart.php");
+    exit();
+}
+
 // Display messages
 $success_message = isset($_SESSION['cart_success']) ? $_SESSION['cart_success'] : '';
 $error_message = isset($_SESSION['cart_error']) ? $_SESSION['cart_error'] : '';
@@ -59,9 +97,10 @@ unset($_SESSION['cart_error']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart - ShopVerse</title>
+    <title>Shopping Cart - ShopEMart</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -70,9 +109,86 @@ unset($_SESSION['cart_error']);
         }
         
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f1f3f6;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
+        }
+        
+        /* Navigation */
+        .navbar-daraz {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 0.8rem 0;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.2);
+        }
+        
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            padding: 5px 0;
+        }
+        
+        .logo-img {
+            height: 45px;
+            width: auto;
+            border-radius: 10px;
+            transition: transform 0.3s;
+        }
+        
+        .navbar-brand:hover .logo-img {
+            transform: scale(1.05);
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        
+        .brand-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+        
+        .brand-name span {
+            color: #ff6600;
+        }
+        
+        .brand-tagline {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 2px;
+            font-weight: 300;
+        }
+        
+        .nav-link {
+            color: white !important;
+            font-weight: 500;
+            transition: all 0.3s;
+            padding: 8px 15px;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255,102,0,0.2);
+            color: #ff6600 !important;
+            transform: translateY(-2px);
+        }
+        
+        .nav-link.active {
+            background: #ff6600;
+            color: white !important;
+        }
+        
+        .nav-link .badge {
+            position: relative;
+            top: -8px;
+            left: -2px;
+            font-size: 0.7rem;
         }
         
         /* Toast Notification */
@@ -82,6 +198,7 @@ unset($_SESSION['cart_error']);
             right: 20px;
             z-index: 9999;
             animation: slideInRight 0.3s ease;
+            max-width: 350px;
         }
         
         @keyframes slideInRight {
@@ -99,14 +216,14 @@ unset($_SESSION['cart_error']);
             background: white;
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
             margin: 30px 0;
         }
         
         .cart-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6600, #ff8533);
             color: white;
-            padding: 20px;
+            padding: 25px 30px;
             border-radius: 15px;
             margin-bottom: 30px;
         }
@@ -119,6 +236,17 @@ unset($_SESSION['cart_error']);
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
+        .product-image-placeholder {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
         .quantity-input {
             width: 80px;
             text-align: center;
@@ -129,14 +257,19 @@ unset($_SESSION['cart_error']);
         }
         
         .quantity-input:focus {
-            border-color: #667eea;
+            border-color: #ff6600;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+            box-shadow: 0 0 0 3px rgba(255,102,0,0.1);
         }
         
         .quantity-input.invalid {
             border-color: #dc3545;
             background-color: #fff3f3;
+        }
+        
+        .quantity-input.valid {
+            border-color: #28a745;
+            background-color: #f0fff4;
         }
         
         .stock-warning {
@@ -212,11 +345,13 @@ unset($_SESSION['cart_error']);
             border-radius: 50px;
             font-size: 12px;
             transition: all 0.3s;
+            color: white;
         }
         
         .btn-remove:hover {
             transform: translateY(-2px);
             box-shadow: 0 3px 10px rgba(220,53,69,0.3);
+            color: white;
         }
         
         .cart-empty {
@@ -243,13 +378,47 @@ unset($_SESSION['cart_error']);
         }
         
         .table tbody tr:hover {
-            background: #f8f9ff;
+            background: #fff8f0;
         }
         
         .total-amount {
             font-size: 1.5rem;
             font-weight: bold;
-            color: #667eea;
+            color: #ff6600;
+        }
+        
+        .price-npr {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .price-npr i {
+            font-size: 12px;
+            margin-right: 2px;
+        }
+        
+        /* Trust Badge */
+        .trust-badges {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .update-cart-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s;
+            color: white;
+        }
+        
+        .update-cart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+            color: white;
         }
         
         @media (max-width: 768px) {
@@ -264,20 +433,34 @@ unset($_SESSION['cart_error']);
                 width: 50px;
                 height: 50px;
             }
+            .logo-img {
+                height: 35px;
+            }
+            .brand-name {
+                font-size: 1.3rem;
+            }
+            .brand-tagline {
+                font-size: 0.6rem;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-daraz">
         <div class="container">
             <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-store"></i> ShopVerse
+                <img src="../assets/images/ss.jpg" alt="ShopVerse Logo" class="logo-img">
+                <div class="logo-text">
+                    <div class="brand-name">Shop<span>EMart</span></div>
+                    <div class="brand-tagline">SHOP SMARTER</div>
+                </div>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="dashboard.php">
                             <i class="fas fa-tachometer-alt"></i> Dashboard
@@ -343,12 +526,12 @@ unset($_SESSION['cart_error']);
     <div class="container">
         <div class="cart-container">
             <div class="cart-header">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex flex-wrap justify-content-between align-items-center">
                     <div>
                         <h2 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Shopping Cart</h2>
                         <p class="mb-0 mt-2 opacity-75">Review and manage your items before checkout</p>
                     </div>
-                    <div class="text-end">
+                    <div class="text-end mt-2 mt-md-0">
                         <span class="badge bg-light text-dark px-3 py-2 rounded-pill">
                             <i class="fas fa-box"></i> <?php echo count($cart_items); ?> Items
                         </span>
@@ -384,110 +567,130 @@ unset($_SESSION['cart_error']);
             <?php endif; ?>
             
             <?php if(count($cart_items) > 0): ?>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Price</th>
-                                <th>Quantity</th>
-                                <th>Subtotal</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($cart_items as $item): 
-                                $has_stock_issue = $item['quantity'] > $item['stock'];
-                                $max_quantity = $item['stock'];
-                            ?>
+                <form method="POST" id="cartForm">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <?php if(!empty($item['image']) && file_exists("../uploads/" . $item['image'])): ?>
-                                                <img src="../uploads/<?php echo $item['image']; ?>" class="product-image me-3" alt="<?php echo htmlspecialchars($item['name']); ?>">
-                                            <?php else: ?>
-                                                <div class="product-image bg-light d-flex align-items-center justify-content-center me-3">
-                                                    <i class="fas fa-box-open fa-2x text-muted"></i>
-                                                </div>
-                                            <?php endif; ?>
-                                            <div>
-                                                <strong class="fs-6"><?php echo htmlspecialchars($item['name']); ?></strong>
-                                                <?php if($has_stock_issue): ?>
-                                                    <div class="stock-warning">
-                                                        <i class="fas fa-exclamation-circle"></i> Only <?php echo $item['stock']; ?> available!
-                                                    </div>
+                                    <th>Product</th>
+                                    <th>Price (RS)</th>
+                                    <th>Quantity</th>
+                                    <th>Subtotal (RS)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach($cart_items as $item): 
+                                    $has_stock_issue = $item['quantity'] > $item['stock'];
+                                    $max_quantity = $item['stock'];
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <?php 
+                                                $image_path = '';
+                                                if (!empty($item['image'])) {
+                                                    if (file_exists("../uploads/" . $item['image'])) {
+                                                        $image_path = "../uploads/" . $item['image'];
+                                                    } elseif (file_exists("uploads/" . $item['image'])) {
+                                                        $image_path = "uploads/" . $item['image'];
+                                                    }
+                                                }
+                                                ?>
+                                                <?php if($image_path): ?>
+                                                    <img src="<?php echo $image_path; ?>" class="product-image me-3" alt="<?php echo htmlspecialchars($item['name']); ?>">
                                                 <?php else: ?>
-                                                    <div class="stock-info">
-                                                        <i class="fas fa-check-circle"></i> <?php echo $item['stock']; ?> in stock
+                                                    <div class="product-image-placeholder me-3">
+                                                        <i class="fas fa-box-open fa-2x"></i>
                                                     </div>
                                                 <?php endif; ?>
+                                                <div>
+                                                    <strong class="fs-6"><?php echo htmlspecialchars($item['name']); ?></strong>
+                                                    <?php if($has_stock_issue): ?>
+                                                        <div class="stock-warning">
+                                                            <i class="fas fa-exclamation-circle"></i> Only <?php echo $item['stock']; ?> available!
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="stock-info">
+                                                            <i class="fas fa-check-circle"></i> <?php echo $item['stock']; ?> in stock
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold">$<?php echo number_format($item['price'], 2); ?></span>
-                                    </td>
-                                    <td>
-                                        <form action="update_cart.php" method="POST" class="update-quantity-form">
-                                            <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                            <input type="hidden" name="max_stock" value="<?php echo $max_quantity; ?>">
+                                        </td>
+                                        <td>
+                                            <span class="price-npr">
+                                                <i class="fas fa-rupee-sign"></i> <?php echo number_format($item['price'], 2); ?>
+                                            </span>
+                                        </td>
+                                        <td>
                                             <input type="number" 
-                                                   name="quantity" 
+                                                   name="quantity[<?php echo $item['id']; ?>]" 
                                                    value="<?php echo $item['quantity']; ?>" 
                                                    min="1" 
                                                    max="<?php echo $max_quantity; ?>"
                                                    class="quantity-input <?php echo $has_stock_issue ? 'invalid' : ''; ?>"
-                                                   onchange="validateAndSubmit(this)"
                                                    data-product-name="<?php echo htmlspecialchars($item['name']); ?>"
-                                                   data-max-stock="<?php echo $max_quantity; ?>">
-                                        </form>
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold text-primary">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></span>
-                                    </td>
-                                    <td>
-                                        <a href="remove_from_cart.php?cart_id=<?php echo $item['id']; ?>" 
-                                           class="btn btn-remove text-white btn-sm"
-                                           onclick="return confirm('Remove this item from cart?')">
-                                            <i class="fas fa-trash-alt"></i> Remove
-                                        </a>
-                                    </td>
+                                                   data-max-stock="<?php echo $max_quantity; ?>"
+                                                   onchange="validateQuantity(this)">
+                                        </td>
+                                        <td>
+                                            <span class="price-npr fw-bold text-primary">
+                                                <i class="fas fa-rupee-sign"></i> <?php echo number_format($item['price'] * $item['quantity'], 2); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="cart.php?remove=1&cart_id=<?php echo $item['id']; ?>" 
+                                               class="btn btn-remove btn-sm"
+                                               onclick="return confirm('Remove this item from your cart?')">
+                                                <i class="fas fa-trash-alt"></i> Remove
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="3" class="text-end">Total Amount:</th>
+                                    <th colspan="2">
+                                        <span class="total-amount">
+                                            <i class="fas fa-rupee-sign"></i> <?php echo number_format($total, 2); ?>
+                                        </span>
+                                    </th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <th colspan="3" class="text-end">Total Amount:</th>
-                                <th colspan="2">
-                                    <span class="total-amount">$<?php echo number_format($total, 2); ?></span>
-                                </th>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3">
-                    <a href="shop.php" class="btn btn-outline-primary rounded-pill px-4 mb-2 mb-md-0">
-                        <i class="fas fa-arrow-left"></i> Continue Shopping
-                    </a>
+                            </tfoot>
+                        </table>
+                    </div>
                     
-                    <?php if(count($stock_errors) > 0): ?>
-                        <button class="btn btn-checkout text-white" disabled>
-                            <i class="fas fa-lock"></i> Fix Stock Issues to Checkout
-                        </button>
-                    <?php else: ?>
-                        <a href="checkout.php" class="btn btn-checkout text-white">
-                            <i class="fas fa-credit-card"></i> Proceed to Checkout
-                        </a>
-                    <?php endif; ?>
-                </div>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top">
+                        <div class="d-flex gap-2">
+                            <a href="shop.php" class="btn btn-outline-primary rounded-pill px-4">
+                                <i class="fas fa-arrow-left"></i> Continue Shopping
+                            </a>
+                            <button type="submit" name="update_cart" class="btn update-cart-btn">
+                                <i class="fas fa-sync-alt"></i> Update Cart
+                            </button>
+                        </div>
+                        
+                        <?php if(count($stock_errors) > 0): ?>
+                            <button class="btn btn-checkout text-white" disabled>
+                                <i class="fas fa-lock"></i> Fix Stock Issues to Checkout
+                            </button>
+                        <?php else: ?>
+                            <a href="checkout.php" class="btn btn-checkout text-white">
+                                <i class="fas fa-credit-card"></i> Proceed to Checkout
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
                 
                 <!-- Trust Badges -->
-                <div class="text-center mt-4 pt-3 border-top">
+                <div class="trust-badges text-center">
                     <small class="text-muted">
-                        <i class="fas fa-lock me-1"></i> Secure Payment | 
-                        <i class="fas fa-truck me-1"></i> Free Shipping on Orders $50+ | 
-                        <i class="fas fa-undo-alt me-1"></i> 7-Day Return Policy
+                        <i class="fas fa-lock me-1 text-success"></i> Secure Payment &nbsp;|&nbsp;
+                        <i class="fas fa-truck me-1 text-primary"></i> Free Shipping on Orders RS 5000+ &nbsp;|&nbsp;
+                        <i class="fas fa-undo-alt me-1 text-warning"></i> 7-Day Return Policy &nbsp;|&nbsp;
+                        <i class="fas fa-headset me-1 text-info"></i> 24/7 Support
                     </small>
                 </div>
             <?php else: ?>
@@ -495,27 +698,30 @@ unset($_SESSION['cart_error']);
                     <i class="fas fa-shopping-cart"></i>
                     <h4 class="mt-3">Your cart is empty</h4>
                     <p class="text-muted">Looks like you haven't added any items to your cart yet.</p>
-                    <a href="shop.php" class="btn btn-primary rounded-pill px-4 mt-2">
+                    <a href="shop.php" class="btn btn-primary rounded-pill px-4 mt-2" style="background: linear-gradient(135deg, #ff6600, #ff8533); border: none;">
                         <i class="fas fa-store"></i> Start Shopping
                     </a>
                 </div>
             <?php endif; ?>
         </div>
     </div>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function validateAndSubmit(input) {
+        function validateQuantity(input) {
             const maxStock = parseInt(input.getAttribute('data-max-stock'));
             const requestedQty = parseInt(input.value);
             const productName = input.getAttribute('data-product-name');
-            const form = input.closest('form');
             
             // Validate quantity
             if (isNaN(requestedQty) || requestedQty < 1) {
                 alert('Please enter a valid quantity (minimum 1)');
                 input.value = 1;
                 input.classList.remove('invalid');
-                form.submit();
+                input.classList.add('valid');
+                setTimeout(() => {
+                    input.classList.remove('valid');
+                }, 1500);
                 return;
             }
             
@@ -526,12 +732,14 @@ unset($_SESSION['cart_error']);
                 // Auto-correct to max stock
                 input.value = maxStock;
                 input.classList.add('invalid');
+                input.classList.remove('valid');
             } else {
                 input.classList.remove('invalid');
+                input.classList.add('valid');
+                setTimeout(() => {
+                    input.classList.remove('valid');
+                }, 1500);
             }
-            
-            // Submit the form to update cart
-            form.submit();
         }
         
         // Add visual feedback for quantity inputs
@@ -541,19 +749,38 @@ unset($_SESSION['cart_error']);
                 const currentValue = parseInt(this.value);
                 
                 if (currentValue > maxStock) {
-                    this.style.borderColor = '#dc3545';
-                    this.style.backgroundColor = '#fff3f3';
-                } else {
-                    this.style.borderColor = '#28a745';
-                    this.style.backgroundColor = 'white';
-                    
-                    // Auto-revert after 2 seconds
+                    this.classList.add('invalid');
+                    this.classList.remove('valid');
+                } else if (currentValue >= 1 && !isNaN(currentValue)) {
+                    this.classList.remove('invalid');
+                    this.classList.add('valid');
                     setTimeout(() => {
-                        this.style.borderColor = '#e0e0e0';
+                        this.classList.remove('valid');
                     }, 2000);
                 }
             });
+            
+            input.addEventListener('keyup', function() {
+                const maxStock = parseInt(this.getAttribute('data-max-stock'));
+                const currentValue = parseInt(this.value);
+                
+                if (currentValue > maxStock) {
+                    this.classList.add('invalid');
+                    this.classList.remove('valid');
+                } else if (currentValue >= 1 && !isNaN(currentValue)) {
+                    this.classList.remove('invalid');
+                }
+            });
         });
+        
+        // Auto-hide toast notifications
+        setTimeout(() => {
+            document.querySelectorAll('.toast-notification').forEach(toast => {
+                toast.style.transition = 'opacity 0.5s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 500);
+            });
+        }, 5000);
     </script>
 </body>
 </html>

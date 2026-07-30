@@ -8,7 +8,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] != 'customer') {
     $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
     
     if ($is_ajax) {
-        // Return JSON response for AJAX
         header('Content-Type: application/json');
         echo json_encode([
             'success' => false,
@@ -75,50 +74,66 @@ if ($product_id > 0) {
         $cart_count = 0;
         $message = '';
         
-        if ($existing) {
-            // Update quantity - check if new total exceeds stock
-            $new_quantity = $existing['quantity'] + $quantity;
-            if ($new_quantity > $product['stock']) {
-                $error_msg = "Cannot add {$quantity} more. You already have {$existing['quantity']} in cart. Maximum {$product['stock']} available.";
-                
-                if ($is_ajax) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => $error_msg]);
+        try {
+            if ($existing) {
+                // Update quantity - check if new total exceeds stock
+                $new_quantity = $existing['quantity'] + $quantity;
+                if ($new_quantity > $product['stock']) {
+                    $error_msg = "Cannot add {$quantity} more. You already have {$existing['quantity']} in cart. Maximum {$product['stock']} available.";
+                    
+                    if ($is_ajax) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => $error_msg]);
+                        exit();
+                    }
+                    
+                    $_SESSION['cart_error'] = $error_msg;
+                    header("Location: " . $redirect_page);
                     exit();
                 }
                 
-                $_SESSION['cart_error'] = $error_msg;
-                header("Location: " . $redirect_page);
+                $stmt = $db->prepare("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?");
+                $stmt->execute([$new_quantity, $user_id, $product_id]);
+                $message = "{$product['name']} quantity updated to {$new_quantity} in cart!";
+            } else {
+                // Add new item to cart
+                $stmt = $db->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)");
+                $stmt->execute([$user_id, $product_id, $quantity]);
+                $message = "{$product['name']} added to cart!";
+            }
+            
+            // Get updated cart count
+            $stmt = $db->prepare("SELECT SUM(quantity) as total FROM cart WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $cart_count = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?: 0;
+            
+            if ($is_ajax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => $message,
+                    'cart_count' => (int)$cart_count,
+                    'cart_total' => (int)$cart_count,
+                    'product_name' => $product['name']
+                ]);
                 exit();
             }
             
-            $stmt = $db->prepare("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?");
-            $stmt->execute([$new_quantity, $user_id, $product_id]);
-            $message = "{$product['name']} quantity updated to {$new_quantity} in cart!";
-        } else {
-            // Add new item to cart
-            $stmt = $db->prepare("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)");
-            $stmt->execute([$user_id, $product_id, $quantity]);
-            $message = "{$product['name']} added to cart!";
+            $_SESSION['cart_success'] = $message;
+            $_SESSION['cart_count'] = $cart_count;
+            
+        } catch (PDOException $e) {
+            error_log("Cart Error: " . $e->getMessage());
+            $error_msg = "Database error occurred. Please try again.";
+            
+            if ($is_ajax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $error_msg]);
+                exit();
+            }
+            
+            $_SESSION['cart_error'] = $error_msg;
         }
-        
-        // Get updated cart count
-        $stmt = $db->prepare("SELECT SUM(quantity) as total FROM cart WHERE user_id = ?");
-        $stmt->execute([$user_id]);
-        $cart_count = $stmt->fetch(PDO::FETCH_ASSOC)['total'] ?: 0;
-        
-        if ($is_ajax) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => true,
-                'message' => $message,
-                'cart_count' => $cart_count,
-                'cart_total' => $cart_count
-            ]);
-            exit();
-        }
-        
-        $_SESSION['cart_success'] = $message;
     } else {
         $error_msg = "Product not found or unavailable.";
         
@@ -143,6 +158,10 @@ if ($product_id > 0) {
 }
 
 // Redirect back to the page user came from
-header("Location: " . $redirect_page);
+if (!empty($redirect_page)) {
+    header("Location: " . $redirect_page);
+} else {
+    header("Location: cart.php");
+}
 exit();
 ?>

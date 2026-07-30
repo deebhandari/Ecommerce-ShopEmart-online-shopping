@@ -119,9 +119,10 @@ unset($_SESSION['success']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Products - ShopVerse Admin</title>
+    <title>Manage Products - ShopEMart Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -130,20 +131,25 @@ unset($_SESSION['success']);
         }
         
         body {
-            background: #f0f2f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f1f3f6;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
+        /* Sidebar */
         .sidebar {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
             min-height: 100vh;
             position: sticky;
             top: 0;
+            transition: all 0.3s;
+            box-shadow: 5px 0 20px rgba(0,0,0,0.1);
         }
         
         .sidebar h4 {
             border-bottom: 1px solid rgba(255,255,255,0.1);
             padding-bottom: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         .sidebar a {
@@ -153,52 +159,36 @@ unset($_SESSION['success']);
             padding: 12px 20px;
             display: block;
             text-decoration: none;
+            margin: 5px 0;
+            border-radius: 0 10px 10px 0;
         }
         
         .sidebar a:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(102,126,234,0.2);
             color: white;
             border-left-color: #667eea;
-            padding-left: 25px;
+            transform: translateX(5px);
         }
         
         .sidebar a.active {
-            background: rgba(102,126,234,0.2);
+            background: linear-gradient(90deg, rgba(102,126,234,0.3) 0%, rgba(102,126,234,0) 100%);
             color: white;
             border-left-color: #667eea;
         }
         
         .sidebar a i {
-            width: 25px;
+            width: 30px;
+            margin-right: 10px;
         }
         
-        .product-image {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-        
-        .image-preview {
-            max-width: 150px;
-            max-height: 150px;
-            margin-top: 10px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .current-image {
-            border: 2px solid #28a745;
-            padding: 5px;
-            background: #f8f9fa;
-        }
-        
+        /* Toast Notification */
         .toast-notification {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 9999;
             animation: slideInRight 0.3s ease;
+            max-width: 350px;
         }
         
         @keyframes slideInRight {
@@ -212,46 +202,157 @@ unset($_SESSION['success']);
             }
         }
         
+        /* Form */
+        .form-container {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+        }
+        
+        .form-container .form-header {
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #ff6600;
+        }
+        
         .form-control, .form-select {
             border-radius: 10px;
             border: 1px solid #ddd;
             padding: 10px 15px;
+            transition: all 0.3s;
         }
         
         .form-control:focus, .form-select:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25);
+            border-color: #ff6600;
+            box-shadow: 0 0 0 3px rgba(255,102,0,0.1);
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #ff6600, #ff8533);
             border: none;
             border-radius: 50px;
             padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+            box-shadow: 0 5px 15px rgba(255,102,0,0.4);
         }
         
+        /* Product Image */
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .image-preview {
+            max-width: 150px;
+            max-height: 150px;
+            margin-top: 10px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .current-image {
+            border: 2px solid #2ecc71;
+            padding: 5px;
+            background: #f8f9fa;
+        }
+        
+        /* Table Container */
         .table-container {
             background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            overflow-x: auto;
         }
         
         .table thead th {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #ff6600, #ff8533);
             color: white;
             font-weight: 500;
+            padding: 12px 15px;
             border: none;
+            font-size: 0.85rem;
         }
         
-        .btn-sm {
-            border-radius: 8px;
-            margin: 2px;
+        .table tbody tr {
+            transition: all 0.3s;
+        }
+        
+        .table tbody tr:hover {
+            background: #fff8f0;
+        }
+        
+        .table tbody td {
+            vertical-align: middle;
+            padding: 12px 15px;
+        }
+        
+        /* Badges */
+        .badge-stock {
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-stock.in-stock { background: #d4edda; color: #155724; }
+        .badge-stock.low-stock { background: #fff3cd; color: #856404; }
+        .badge-stock.out-stock { background: #f8d7da; color: #721c24; }
+        
+        .badge-status { padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+        .badge-status.active { background: #d4edda; color: #155724; }
+        .badge-status.inactive { background: #e9ecef; color: #6c757d; }
+        
+        /* Buttons */
+        .btn-edit {
+            background: #ffc107;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+        .btn-edit:hover {
+            transform: scale(1.05);
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+        .btn-delete:hover {
+            transform: scale(1.05);
+        }
+        
+        .price-npr {
+            font-weight: 600;
+            color: #ff6600;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+                position: relative;
+            }
+            .table-container {
+                padding: 10px;
+            }
         }
     </style>
 </head>
@@ -261,7 +362,7 @@ unset($_SESSION['success']);
             <!-- Sidebar -->
             <div class="col-md-2 sidebar p-0">
                 <h4 class="text-white text-center py-3">
-                    <i class="fas fa-store"></i> ShopVerse
+                    <i class="fas fa-store"></i> ShopEMart
                 </h4>
                 <a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                 <a href="users.php"><i class="fas fa-users"></i> Users</a>
@@ -305,92 +406,107 @@ unset($_SESSION['success']);
                     <h2>
                         <i class="fas fa-box text-primary"></i> Manage Products
                     </h2>
+                    <span class="badge bg-light text-dark px-3 py-2 rounded-pill">
+                        <i class="fas fa-boxes"></i> Total: <?php echo count($products); ?> Products
+                    </span>
                 </div>
                 
                 <!-- Add/Edit Product Form -->
-                <div class="card mb-4 border-0 shadow-sm">
-                    <div class="card-header bg-white border-0 pt-4 pb-0">
-                        <h5 class="mb-0">
-                            <i class="fas fa-<?php echo $edit_product ? 'edit' : 'plus'; ?> text-primary me-2"></i>
-                            <?php echo $edit_product ? 'Edit Product' : 'Add New Product'; ?>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" enctype="multipart/form-data">
-                            <?php if($edit_product): ?>
-                                <input type="hidden" name="product_id" value="<?php echo $edit_product['id']; ?>">
-                            <?php endif; ?>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Product Name <span class="text-danger">*</span></label>
-                                    <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($edit_product['name'] ?? ''); ?>" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Category</label>
-                                    <select name="category" class="form-select">
-                                        <option value="">Select Category</option>
-                                        <option value="Electronics" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Electronics') ? 'selected' : ''; ?>>📱 Electronics</option>
-                                        <option value="Fashion" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Fashion') ? 'selected' : ''; ?>>👕 Fashion</option>
-                                        <option value="Sports" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Sports') ? 'selected' : ''; ?>>⚽ Sports</option>
-                                        <option value="Books" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Books') ? 'selected' : ''; ?>>📚 Books</option>
-                                        <option value="Home" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Home') ? 'selected' : ''; ?>>🏠 Home & Living</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-12 mb-3">
-                                    <label class="form-label">Description</label>
-                                    <textarea name="description" class="form-control" rows="3" placeholder="Product description..."><?php echo htmlspecialchars($edit_product['description'] ?? ''); ?></textarea>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label">Price ($) <span class="text-danger">*</span></label>
+                <div class="form-container">
+                    <h5 class="form-header">
+                        <i class="fas fa-<?php echo $edit_product ? 'edit' : 'plus'; ?> me-2"></i>
+                        <?php echo $edit_product ? 'Edit Product' : 'Add New Product'; ?>
+                    </h5>
+                    
+                    <form method="POST" enctype="multipart/form-data">
+                        <?php if($edit_product): ?>
+                            <input type="hidden" name="product_id" value="<?php echo $edit_product['id']; ?>">
+                        <?php endif; ?>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Product Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($edit_product['name'] ?? ''); ?>" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Category</label>
+                                <select name="category" class="form-select">
+                                    <option value="">Select Category</option>
+                                    <option value="Electronics" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Electronics') ? 'selected' : ''; ?>>📱 Electronics</option>
+                                    <option value="Fashion" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Fashion') ? 'selected' : ''; ?>>👕 Fashion</option>
+                                    <option value="Sports" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Sports') ? 'selected' : ''; ?>>⚽ Sports</option>
+                                    <option value="Books" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Books') ? 'selected' : ''; ?>>📚 Books</option>
+                                    <option value="Home" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Home') ? 'selected' : ''; ?>>🏠 Home & Living</option>
+                                    <option value="Beauty" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Beauty') ? 'selected' : ''; ?>>💄 Beauty</option>
+                                    <option value="Toys & Games" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Toys & Games') ? 'selected' : ''; ?>>🧸 Toys & Gamesy</option>
+                                     <option value="Pet Supplies" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Pet Supplies') ? 'selected' : ''; ?>>🐶 Pet Supplies</option>
+                                     <option value="Fruits & Vegetables" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Fruits') ? 'selected' : ''; ?>>🍎 Fruits</option>
+                                    <option value="Bags" <?php echo (isset($edit_product['category']) && $edit_product['category'] == 'Bags') ? 'selected' : ''; ?>>👜 Bags</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Description</label>
+                                <textarea name="description" class="form-control" rows="3" placeholder="Product description..."><?php echo htmlspecialchars($edit_product['description'] ?? ''); ?></textarea>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Price (NPR) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="fas fa-rupee-sign"></i></span>
                                     <input type="number" step="0.01" name="price" class="form-control" value="<?php echo $edit_product['price'] ?? ''; ?>" required>
                                 </div>
-                                <div class="col-md-3 mb-3">
-                                    <label class="form-label">Stock Quantity <span class="text-danger">*</span></label>
-                                    <input type="number" name="stock" class="form-control" value="<?php echo $edit_product['stock'] ?? ''; ?>" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Product Image</label>
-                                    <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImage(this)">
-                                    <small class="text-muted">Supported formats: JPG, PNG, GIF, WEBP (Max 2MB)</small>
-                                    
-                                    <?php if(isset($edit_product['image']) && $edit_product['image']): ?>
-                                        <div class="mt-3 p-2 bg-light rounded">
-                                            <p class="mb-1"><i class="fas fa-image text-primary"></i> Current Image:</p>
-                                            <img src="../uploads/<?php echo $edit_product['image']; ?>" class="current-image image-preview" alt="Current product image">
-                                        </div>
-                                    <?php endif; ?>
-                                    
-                                    <div id="imagePreviewContainer" style="display: none;" class="mt-3 p-2 bg-light rounded">
-                                        <p><i class="fas fa-eye text-primary"></i> New Image Preview:</p>
-                                        <img id="imagePreview" class="image-preview" alt="Preview">
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label fw-bold">Stock Quantity <span class="text-danger">*</span></label>
+                                <input type="number" name="stock" class="form-control" value="<?php echo $edit_product['stock'] ?? ''; ?>" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Product Image</label>
+                                <input type="file" name="image" class="form-control" accept="image/*" onchange="previewImage(this)">
+                                <small class="text-muted">Supported formats: JPG, PNG, GIF, WEBP (Max 2MB)</small>
+                                
+                                <?php if(isset($edit_product['image']) && $edit_product['image']): ?>
+                                    <div class="mt-3 p-2 bg-light rounded">
+                                        <p class="mb-1"><i class="fas fa-image text-primary"></i> Current Image:</p>
+                                        <img src="../uploads/<?php echo $edit_product['image']; ?>" class="current-image image-preview" alt="Current product image">
                                     </div>
-                                </div>
-                                <div class="col-md-12">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i> <?php echo $edit_product ? 'Update Product' : 'Add Product'; ?>
-                                    </button>
-                                    <?php if($edit_product): ?>
-                                        <a href="products.php" class="btn btn-secondary ms-2">
-                                            <i class="fas fa-times me-2"></i> Cancel
-                                        </a>
-                                    <?php endif; ?>
+                                <?php endif; ?>
+                                
+                                <div id="imagePreviewContainer" style="display: none;" class="mt-3 p-2 bg-light rounded">
+                                    <p><i class="fas fa-eye text-primary"></i> New Image Preview:</p>
+                                    <img id="imagePreview" class="image-preview" alt="Preview">
                                 </div>
                             </div>
-                        </form>
-                    </div>
+                            
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i> <?php echo $edit_product ? 'Update Product' : 'Add Product'; ?>
+                                </button>
+                                <?php if($edit_product): ?>
+                                    <a href="products.php" class="btn btn-secondary ms-2">
+                                        <i class="fas fa-times me-2"></i> Cancel
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </form>
                 </div>
                 
                 <!-- Products Table -->
                 <div class="table-container">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>Image</th>
                                     <th>Name</th>
                                     <th>Category</th>
-                                    <th>Price</th>
+                                    <th>Price (NPR)</th>
                                     <th>Stock</th>
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -413,31 +529,35 @@ unset($_SESSION['success']);
                                             <td>
                                                 <?php echo htmlspecialchars($p['name']); ?>
                                                 <br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($p['description']); ?></small>
+                                                <small class="text-muted"><?php echo substr(htmlspecialchars($p['description']), 0, 40); ?>...</small>
                                             </td>
                                             <td><?php echo htmlspecialchars($p['category']); ?></td>
-                                            <td><strong class="text-primary">$<?php echo number_format($p['price'], 2); ?></strong></td>
                                             <td>
-                                                <?php if($p['stock'] <= 5 && $p['stock'] > 0): ?>
-                                                    <span class="badge bg-warning text-dark">⚠️ <?php echo $p['stock']; ?> left</span>
-                                                <?php elseif($p['stock'] <= 0): ?>
-                                                    <span class="badge bg-danger">❌ Out of Stock</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-success">✓ <?php echo $p['stock']; ?> in stock</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-<?php echo $p['status'] == 'active' ? 'success' : 'secondary'; ?>">
-                                                    <?php echo $p['status']; ?>
+                                                <span class="price-npr">
+                                                    <i class="fas fa-rupee-sign"></i> <?php echo number_format($p['price'], 2); ?>
                                                 </span>
                                             </td>
                                             <td>
-                                                <a href="?edit=<?php echo $p['id']; ?>" class="btn btn-warning btn-sm" title="Edit Product">
-                                                    <i class="fas fa-edit"></i>
+                                                <?php if($p['stock'] <= 5 && $p['stock'] > 0): ?>
+                                                    <span class="badge-stock low-stock">⚠️ <?php echo $p['stock']; ?> left</span>
+                                                <?php elseif($p['stock'] <= 0): ?>
+                                                    <span class="badge-stock out-stock">❌ Out of Stock</span>
+                                                <?php else: ?>
+                                                    <span class="badge-stock in-stock">✓ <?php echo $p['stock']; ?> in stock</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <span class="badge-status <?php echo $p['status'] == 'active' ? 'active' : 'inactive'; ?>">
+                                                    <?php echo ucfirst($p['status']); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="?edit=<?php echo $p['id']; ?>" class="btn btn-edit text-dark btn-sm" title="Edit Product">
+                                                    <i class="fas fa-edit"></i> Edit
                                                 </a>
-                                                <a href="?delete=<?php echo $p['id']; ?>" class="btn btn-danger btn-sm" title="Delete Product" 
+                                                <a href="?delete=<?php echo $p['id']; ?>" class="btn btn-delete text-white btn-sm" title="Delete Product" 
                                                    onclick="return confirm('⚠️ Are you sure you want to delete "<?php echo addslashes($p['name']); ?>"?\n\nThis action cannot be undone!')">
-                                                    <i class="fas fa-trash-alt"></i>
+                                                    <i class="fas fa-trash-alt"></i> Delete
                                                 </a>
                                             </td>
                                         </tr>

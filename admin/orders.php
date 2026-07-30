@@ -93,7 +93,7 @@ unset($_SESSION['success']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Orders - ShopVerse Admin</title>
+    <title>Manage Orders - ShopEMart Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -404,7 +404,7 @@ unset($_SESSION['success']);
             <!-- Sidebar -->
             <div class="col-md-2 sidebar p-0">
                 <h4 class="text-white text-center py-3">
-                    <i class="fas fa-store"></i> ShopVerse
+                    <i class="fas fa-store"></i> ShopEMart
                 </h4>
                 <a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                 <a href="users.php"><i class="fas fa-users"></i> Users</a>
@@ -477,8 +477,8 @@ unset($_SESSION['success']);
                     </div>
                     <div class="col-md-2">
                         <div class="stat-card revenue">
-                            <h3>$<?php echo number_format($total_revenue, 2); ?></h3>
-                            <p><i class="fas fa-dollar-sign"></i> Revenue</p>
+                            <h3>RS<?php echo number_format($total_revenue, 2); ?></h3>
+                            <p><i class="fas fa-rupee-sign"></i> Revenue</p>
                             <div class="icon"><i class="fas fa-chart-line"></i></div>
                         </div>
                     </div>
@@ -538,7 +538,7 @@ unset($_SESSION['success']);
                                 <tr>
                                     <th><i class="fas fa-hashtag"></i> Order #</th>
                                     <th><i class="fas fa-user"></i> Customer</th>
-                                    <th><i class="fas fa-dollar-sign"></i> Total</th>
+                                    <th><i class="fas fa-rupee-sign"></i> Total</th>
                                     <th><i class="fas fa-credit-card"></i> Payment</th>
                                     <th><i class="fas fa-check-circle"></i> Payment Status</th>
                                     <th><i class="fas fa-truck"></i> Order Status</th>
@@ -557,7 +557,7 @@ unset($_SESSION['success']);
                                                 <strong><?php echo htmlspecialchars($order['customer_name']); ?></strong>
                                                 <br><small class="text-muted"><?php echo htmlspecialchars($order['customer_email']); ?></small>
                                              </td>
-                                            <td><strong>$<?php echo number_format($order['total_amount'], 2); ?></strong></td>
+                                            <td><strong>RS<?php echo number_format($order['total_amount'], 2); ?></strong></td>
                                             <td>
                                                 <?php if($order['payment_method'] == 'cod'): ?>
                                                     <span class="badge-status badge-cod">

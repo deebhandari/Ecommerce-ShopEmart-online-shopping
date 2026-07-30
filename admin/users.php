@@ -31,7 +31,7 @@ $users = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - ShopVerse Admin</title>
+    <title>Manage Users - ShopEMart Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -39,7 +39,7 @@ $users = $db->query($query)->fetchAll(PDO::FETCH_ASSOC);
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-2 bg-dark min-vh-100 p-0">
-                <h4 class="text-white text-center py-3">ShopVerse Admin</h4>
+                <h4 class="text-white text-center py-3">ShopEMart Admin</h4>
                 <a href="dashboard.php" class="text-white d-block p-3 text-decoration-none"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                 <a href="users.php" class="text-white d-block p-3 text-decoration-none bg-secondary"><i class="fas fa-users"></i> Users</a>
                 <a href="products.php" class="text-white d-block p-3 text-decoration-none"><i class="fas fa-box"></i> Products</a>
