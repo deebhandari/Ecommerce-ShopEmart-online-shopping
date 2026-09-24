@@ -57,31 +57,47 @@ $all_products = $all_products_stmt->fetchAll(PDO::FETCH_ASSOC);
 // Get cart count for badge
 $cart_count = 0;
 if (isset($_SESSION['user_id']) && $_SESSION['user_type'] == 'customer') {
-    $cart_stmt = $db->prepare("SELECT SUM(quantity) FROM cart WHERE user_id = ?");
-    $cart_stmt->execute([$_SESSION['user_id']]);
-    $cart_count = $cart_stmt->fetchColumn() ?: 0;
+    try {
+        $cart_stmt = $db->prepare("SELECT SUM(quantity) FROM cart WHERE user_id = ?");
+        $cart_stmt->execute([$_SESSION['user_id']]);
+        $cart_count = $cart_stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        $cart_count = 0;
+    }
 }
 
 // Get wishlist count for badge
 $wishlist_count = 0;
 if (isset($_SESSION['user_id']) && $_SESSION['user_type'] == 'customer') {
-    $wishlist_stmt = $db->prepare("SELECT COUNT(*) FROM wishlist WHERE user_id = ?");
-    $wishlist_stmt->execute([$_SESSION['user_id']]);
-    $wishlist_count = $wishlist_stmt->fetchColumn() ?: 0;
+    try {
+        $wishlist_stmt = $db->prepare("SELECT COUNT(*) FROM wishlist WHERE user_id = ?");
+        $wishlist_stmt->execute([$_SESSION['user_id']]);
+        $wishlist_count = $wishlist_stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        $wishlist_count = 0;
+    }
 }
 
 // Get wishlist product IDs for heart toggle
 $wishlist_product_ids = [];
 if (isset($_SESSION['user_id']) && $_SESSION['user_type'] == 'customer') {
-    $wishlist_ids_stmt = $db->prepare("SELECT product_id FROM wishlist WHERE user_id = ?");
-    $wishlist_ids_stmt->execute([$_SESSION['user_id']]);
-    $wishlist_product_ids = $wishlist_ids_stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-    $wishlist_product_ids = array_flip($wishlist_product_ids);
+    try {
+        $wishlist_ids_stmt = $db->prepare("SELECT product_id FROM wishlist WHERE user_id = ?");
+        $wishlist_ids_stmt->execute([$_SESSION['user_id']]);
+        $wishlist_product_ids = $wishlist_ids_stmt->fetchAll(PDO::FETCH_COLUMN, 0);
+        $wishlist_product_ids = array_flip($wishlist_product_ids);
+    } catch (PDOException $e) {
+        $wishlist_product_ids = [];
+    }
 }
 
 // If page is customercart, include the cart page content
 if ($page == 'customercart') {
-    include 'customer/cart.php';
+    if (file_exists('customer/cart.php')) {
+        include 'customer/cart.php';
+    } else {
+        $page = 'home';
+    }
     exit();
 }
 
@@ -102,7 +118,9 @@ function getProductImage($image_name) {
     $paths = [
         "uploads/" . $image_name,
         "../uploads/" . $image_name,
-        "../../uploads/" . $image_name
+        "../../uploads/" . $image_name,
+        "assets/images/" . $image_name,
+        "../assets/images/" . $image_name
     ];
     
     foreach ($paths as $path) {
@@ -219,6 +237,31 @@ $about_image_exists = file_exists('assets/images/aa.jpg') ||
 // Check if payment images exist
 $esewa_image = file_exists('assets/images/payment/esewa.png') ? 'assets/images/payment/esewa.png' : '';
 $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payment/cod.png' : '';
+
+// Handle contact form submission
+$contact_success = '';
+$contact_error = '';
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['contact_submit'])) {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $subject = trim($_POST['subject'] ?? '');
+    $message = trim($_POST['message'] ?? '');
+    
+    if (empty($name) || empty($email) || empty($subject) || empty($message)) {
+        $contact_error = 'All fields are required.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $contact_error = 'Please enter a valid email address.';
+    } else {
+        // Save to database or send email
+        try {
+            $stmt = $db->prepare("INSERT INTO contacts (name, email, subject, message, created_at) VALUES (?, ?, ?, ?, NOW())");
+            $stmt->execute([$name, $email, $subject, $message]);
+            $contact_success = 'Thank you! Your message has been sent successfully.';
+        } catch (PDOException $e) {
+            $contact_error = 'Could not send message. Please try again later.';
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -816,6 +859,32 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
         }
 
         /* ============================================ */
+        /* CONTACT FORM STYLES */
+        /* ============================================ */
+        .contact-form .form-control {
+            border-radius: 10px;
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+        .contact-form .form-control:focus {
+            border-color: #ff6600;
+            box-shadow: 0 0 0 3px rgba(255,102,0,0.1);
+        }
+        .contact-form .btn-submit {
+            background: linear-gradient(135deg, #ff6600, #ff8533);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .contact-form .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(255,102,0,0.3);
+        }
+
+        /* ============================================ */
         /* RESPONSIVE */
         /* ============================================ */
         @media (max-width: 991px) {
@@ -935,7 +1004,11 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
         <div class="container">
             <!-- Brand Logo with Image -->
             <a class="navbar-brand-custom" href="index.php?page=home">
-                <img src="assets/images/ss.jpg" alt="ShopEMart Logo">
+                <?php if(file_exists('assets/images/ss.jpg')): ?>
+                    <img src="assets/images/ss.jpg" alt="ShopEMart Logo">
+                <?php else: ?>
+                    <img src="assets/images/logo.png" alt="ShopEMart Logo">
+                <?php endif; ?>
                 <div class="logo-text">
                     <div class="brand-name">Shop<span>EMart</span></div>
                     <small class="tagline">Shop Smarter, Live Better</small>
@@ -1017,7 +1090,7 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                         <?php else: ?>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($_SESSION['user_name']); ?>
+                                    <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($_SESSION['user_name'] ?? 'User'); ?>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="customer/dashboard.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
@@ -1096,13 +1169,27 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
             </div>
         <?php endif; ?>
 
+        <?php if($contact_success): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($contact_success); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        
+        <?php if($contact_error): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($contact_error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
         <!-- Dynamic Page Content -->
         <?php if($page == 'home'): ?>
             <!-- ============================================ -->
             <!-- ATTRACTIVE HERO BANNER WITH REAL IMAGES -->
             <!-- ============================================ -->
             <div id="heroBanner" class="hero-banner-daraz" 
-                 style="background: <?php echo $has_hero_image ? 'url(' . $hero_image_path . ') center/cover no-repeat' : $current_hero['color']; ?>;">
+                 style="<?php echo $has_hero_image ? 'background-image: url(' . $hero_image_path . '); background-size: cover; background-position: center;' : 'background: ' . $current_hero['color'] . ';'; ?>">
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-badge">
@@ -1164,7 +1251,7 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                             ?>
                                 <div class="col-6 col-md-3 mb-4">
                                     <div class="product-card-daraz">
-                                        <!-- Wishlist Heart Button - Modern E-commerce Style -->
+                                        <!-- Wishlist Heart Button -->
                                         <?php if(isset($_SESSION['user_id']) && $_SESSION['user_type'] == 'customer'): ?>
                                             <form action="customer/add_to_wishlist.php" method="GET" class="position-absolute" style="top: 10px; right: 10px; z-index: 10;">
                                                 <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
@@ -1174,7 +1261,6 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                                                 </button>
                                             </form>
                                         <?php else: ?>
-                                            <!-- Show heart icon for non-logged in users that links to login -->
                                             <a href="login.php" class="btn-wishlist-card" title="Login to add to wishlist">
                                                 <i class="far fa-heart heart-icon not-in-wishlist"></i>
                                             </a>
@@ -1306,7 +1392,7 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                         <div class="card text-center p-4 h-100 shadow-sm">
                             <i class="fas fa-shipping-fast fa-3x text-primary mb-3"></i>
                             <h4>Free Shipping</h4>
-                            <p class="text-muted">Free shipping on orders over RS 5000</p>
+                            <p class="text-muted">Free shipping on orders over Rs. 5000</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-4">
@@ -1339,15 +1425,21 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                         <a href="?page=products" class="btn <?php echo empty($category_filter) ? 'btn-primary' : 'btn-outline-secondary'; ?> btn-sm">All</a>
                         <?php
                         // Fetch distinct categories from products
-                        $cat_stmt = $db->query("SELECT DISTINCT category FROM products WHERE status = 'active' AND category IS NOT NULL AND category != '' ORDER BY category");
-                        $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
-                        foreach($categories as $cat):
+                        try {
+                            $cat_stmt = $db->query("SELECT DISTINCT category FROM products WHERE status = 'active' AND category IS NOT NULL AND category != '' ORDER BY category");
+                            $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
+                            foreach($categories as $cat):
                         ?>
                             <a href="?page=products&category=<?php echo urlencode($cat); ?>" 
                                class="btn <?php echo ($category_filter == $cat) ? 'btn-primary' : 'btn-outline-secondary'; ?> btn-sm">
                                 <?php echo htmlspecialchars($cat); ?>
                             </a>
-                        <?php endforeach; ?>
+                        <?php 
+                            endforeach;
+                        } catch (PDOException $e) {
+                            // No categories found
+                        }
+                        ?>
                     </div>
                 </div>
 
@@ -1469,20 +1561,27 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
                     <div class="col-md-6 mb-4">
                         <div class="card p-4 shadow-sm">
                             <h4><i class="fas fa-envelope text-primary"></i> Send Message</h4>
-                            <form method="POST" action="customer/contact.php">
+                            <form method="POST" action="?page=contact" class="contact-form">
+                                <input type="hidden" name="contact_submit" value="1">
                                 <div class="mb-3">
-                                    <input type="text" name="name" class="form-control" placeholder="Your Name" required>
+                                    <label for="name" class="form-label">Your Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" id="name" class="form-control" placeholder="Enter your name" required>
                                 </div>
                                 <div class="mb-3">
-                                    <input type="email" name="email" class="form-control" placeholder="Your Email" required>
+                                    <label for="email" class="form-label">Your Email <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" id="email" class="form-control" placeholder="Enter your email" required>
                                 </div>
                                 <div class="mb-3">
-                                    <input type="text" name="subject" class="form-control" placeholder="Subject" required>
+                                    <label for="subject" class="form-label">Subject <span class="text-danger">*</span></label>
+                                    <input type="text" name="subject" id="subject" class="form-control" placeholder="Enter subject" required>
                                 </div>
                                 <div class="mb-3">
-                                    <textarea name="message" class="form-control" rows="5" placeholder="Your Message" required></textarea>
+                                    <label for="message" class="form-label">Message <span class="text-danger">*</span></label>
+                                    <textarea name="message" id="message" class="form-control" rows="5" placeholder="Your message" required></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100">Send Message</button>
+                                <button type="submit" class="btn btn-submit w-100">
+                                    <i class="fas fa-paper-plane"></i> Send Message
+                                </button>
                             </form>
                         </div>
                     </div>
@@ -1604,12 +1703,16 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
             
             banner.style.opacity = '0.7';
             setTimeout(() => {
+                // Try to load image, fallback to gradient
                 const img = new Image();
                 img.src = hero.image;
                 img.onload = function() {
-                    banner.style.background = 'url(' + hero.image + ') center/cover no-repeat';
+                    banner.style.backgroundImage = 'url(' + hero.image + ')';
+                    banner.style.backgroundSize = 'cover';
+                    banner.style.backgroundPosition = 'center';
                 };
                 img.onerror = function() {
+                    banner.style.backgroundImage = 'none';
                     banner.style.background = hero.color;
                 };
                 
@@ -1636,6 +1739,7 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
             }, 5000);
         }
 
+        // Start auto-rotation after a delay
         setTimeout(startHeroRotation, 3000);
 
         // ============================================
@@ -1751,34 +1855,19 @@ $cod_image = file_exists('assets/images/payment/cod.png') ? 'assets/images/payme
             }
         }
 
-        // ============================================
-        // QUANTITY INPUT VALIDATION
-        // ============================================
-        document.querySelectorAll('.quantity-input').forEach(input => {
-            input.addEventListener('change', function() {
-                let max = parseInt(this.getAttribute('max'));
-                let value = parseInt(this.value);
-                if (value > max) {
-                    this.value = max;
-                    showToast('⚠️ Stock Limit', 'Only ' + max + ' items available in stock!', 'error');
-                }
-                if (value < 1 || isNaN(value)) {
-                    this.value = 1;
-                }
-            });
-        });
-
         // Auto-hide alerts after 5 seconds
         setTimeout(() => {
             document.querySelectorAll('.alert').forEach(alert => {
                 if (alert.classList.contains('alert-dismissible')) {
                     const closeBtn = alert.querySelector('.btn-close');
                     if (closeBtn) {
-                        closeBtn.click();
+                        setTimeout(() => {
+                            closeBtn.click();
+                        }, 5000);
                     }
                 }
             });
-        }, 5000);
+        }, 1000);
     </script>
 </body>
 </html>

@@ -154,6 +154,10 @@ body{
     <a href="dashboard.php">
         <i class="fas fa-tachometer-alt"></i> Dashboard
     </a>
+    
+    <a href="contact.php">
+    <i class="fas fa-envelope"></i> Contact
+</a>
 
     <a href="users.php">
         <i class="fas fa-users"></i> Users
